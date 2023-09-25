@@ -125,6 +125,19 @@ class GraphQL(ABC):
         assert res is not None
         return res
 
+    async def do_async(self) -> dict:
+        query = self.build()
+        try:
+            response = await self._connection.post_async(
+                path="/graphql", weaviate_object={"query": query}
+            )
+        except RequestsConnectionError as conn_err:
+            raise RequestsConnectionError("Query was not successful.") from conn_err
+
+        res = _decode_json_response_dict(response, "Query was not successful")
+        assert res is not None
+        return res
+
 
 class Filter(ABC):
     """

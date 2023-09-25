@@ -11,6 +11,7 @@ from threading import Thread, Event
 from typing import Any, Dict, Optional, Tuple, Union, cast
 from urllib.parse import urlparse
 
+import httpx
 import requests
 from authlib.integrations.requests_client import OAuth2Session  # type: ignore
 from requests.adapters import HTTPAdapter
@@ -464,6 +465,27 @@ class Connection:
             proxies=self._proxies,
             params=params,
         )
+
+    async def post_async(
+        self,
+        path: str,
+        weaviate_object: JSONPayload,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> requests.Response:
+        if self.embedded_db is not None:
+            self.embedded_db.ensure_running()
+        request_url = self.url + self._api_version_path + path
+
+        # NOTE: We don't need the self._session as we don't use OIDC (see
+        # self._create_session). We also omit the proxies.
+        async with httpx.AsyncClient() as client:
+            return self._session.post(
+                url=request_url,
+                json=weaviate_object,
+                headers=self._get_request_header(),
+                timeout=self._timeout_config,
+                params=params,
+            )
 
     def put(
         self,
